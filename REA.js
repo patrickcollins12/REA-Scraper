@@ -41,6 +41,7 @@ Geebung
 Carseldine
 The Gap
 Virginia
+
 `
 
 suburbs = mystr.replace(/^\s*\n/gm,'').replace(/\n$/gm,'').split('\n');
