@@ -14,12 +14,14 @@ airsync.createBottlenecks(tableName);
 
 const tableIdentifiers = ["Property"];
 const tableEffectives = ["Property", "Location", "Buy or Rent", "Bed", "BR", "Link", "Rent"];
+let atdata = [];
 
 airsync.getAirtable(tableName, tableIdentifiers, tableEffectives)
-.then(function(atdata) {
+.then(function(values) {
+	atdata = values
 	let len = Object.values(atdata[1]).length;
 	console.log("AirTable records retrieved:", len)
-	// fetchREAdata();
+	fetchREAdata(atdata);
 })
 
 let suburbs = {
@@ -88,6 +90,7 @@ function callListingPage(suburb,postcode,page) {
 				//
 				// let data = [dee,suburb, advertised_price, price, bed, bth, listingUrl]
 				// console.log(data.join('\t'))
+				airsync.upsertAirtableObj(tableName, newSiteObj, tableIdentifiers, atdata)
 			});
 		} else {
 			console.error("Failed to fetch %s",error)
