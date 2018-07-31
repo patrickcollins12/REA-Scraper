@@ -2,6 +2,8 @@
   "name": "",
   "version": "",
   "dependencies": {
+    "airtable": "^0.5.6",
+    "bottleneck": "^2.6.0",
     "cheerio": "^1.0.0-rc.2",
     "request": "^2.85.0"
   }
