@@ -3,40 +3,24 @@
 var request = require('request') // for requests
 var cheerio = require('cheerio') // for html parsing
 
-var baseName = "Properties"
-var base = new Airtable({apiKey: 'keyvjbVyJKBdcU2qR'}).base('appNrxhtn5gIpTxUa')
+const airsync = require("./airtableSync");
 
-const limiter = new Bottleneck({minTime: 1000/15})
-let atCreate = limiter.wrap(base(baseName).create)
-let atUpdate = limiter.wrap(base(baseName).update)
-let atSelect = limiter.wrap(base(baseName).select)
-let throttledEach = limiter.wrap(atSelect.eachPage);
-let atRecords=[];
+// Table names that are being updated
+const tableName = "Properties";
 
-console.log(atSelect)
-atSelect({view: "All", pageSize: 10})
-return;
+// Airtable can only run 5 operations per second (supposedly)
+// 15 per second runs fine though
+airsync.createBottlenecks(tableName); 
 
-// Fetch all Properties
-function fetchProperties () {
-	atSelect({view: "All", pageSize: 10})
-	.eachPage(function page(records, fetchNextPage) {
-		console.log("selecting from airTable...")
-		records.forEach(function(record) {
-			atRecords.push(record)
-		});
-		fetchNextPage();
-	
-	}, function done(err) {
-		if (err) { console.error(err); return; }
-	});
-}
+const tableIdentifiers = ["Property"];
+const tableEffectives = ["Property", "Location", "Buy or Rent", "Bed", "BR", "Link", "Rent"];
 
-fetchProperties().then(function(values) {
-	console.log("done")
+airsync.getAirtable(tableName, tableIdentifiers, tableEffectives)
+.then(function(atdata) {
+	let len = Object.values(atdata[1]).length;
+	console.log("AirTable records retrieved:", len)
+	// fetchREAdata();
 })
-
-
 
 let suburbs = {
 	'Banyo':  'QLD 4014',
@@ -44,9 +28,11 @@ let suburbs = {
 	'Underwood': 'QLD 4119',
 };
 
-for (const suburb in suburbs) {	
-	const postcode = suburbs[suburb]
-	callListingPage(suburb,postcode,1)
+function fetchREAdata() {
+	for (const suburb in suburbs) {	
+		const postcode = suburbs[suburb]
+		callListingPage(suburb,postcode,1)
+	}	
 }
 
 function callListingPage(suburb,postcode,page) {
@@ -54,7 +40,7 @@ function callListingPage(suburb,postcode,page) {
 	let url = `https://www.realestate.com.au/rent/property-house-in-${suburb}%2c+${postcode}/list-${page}?includeSurrounding=false`
 
 	// var regex = /\, ${suburb}.*/
-	request(url, function (error, response, html) {
+	return request(url, function (error, response, html) {
 		if (!error && response.statusCode == 200) {
 
 			// Property name looks like this:
@@ -107,6 +93,5 @@ function callListingPage(suburb,postcode,page) {
 			console.error("Failed to fetch %s",error)
 		}
 	});
-
 }
 
