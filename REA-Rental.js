@@ -24,7 +24,7 @@ const tableName = "Properties";
 Airsync.createBottlenecks(tableName); 
 
 const tableIdentifiers = ["Property", "Location"];
-const tableEffectives = ["Property", "Location", "Buy or Rent", "First Date", "Last Date", "Bed", "BR", "Link", "Rent", "Price History"];
+const tableEffectives = ["Property", "Location", "Buy or Rent", "First Listed", "Last Listed", "Bed", "BR", "Link", "Rent", "Price History"];
 let atdata = [];
 
 Airsync.getAirtable(tableName, tableIdentifiers, tableEffectives)
@@ -40,6 +40,9 @@ let suburbs = {
 	'Banyo':  'QLD 4014',
 	'Aspley': 'QLD 4034',
 	'Underwood': 'QLD 4119',
+	'Geebung': 'QLD 4034',
+	'Zillmere': 'QLD 4034',
+	'Darra': 'QLD 4076'
 };
 
 function fetchREAdata() {
@@ -82,6 +85,7 @@ function callListingPage(suburb,postcode,page) {
 				let a = $(this).find('div .listingInfo');
 				let img = $(this).find('div.photoviewer a img').attr('data-src');
 				let address = $(this).find('div.listingInfo a.name').text();
+				let priceTitle = $(this).find('div.listingInfo p.priceText').attr('title');
 				let price = $(this).find('div.listingInfo p.priceText').text();
 				let bed = $(this).find('div.listingInfo dl dt.rui-icon-bed').next().text();
 				let bth = $(this).find('div.listingInfo dl dt.rui-icon-bath').next().text();
@@ -90,12 +94,21 @@ function callListingPage(suburb,postcode,page) {
 
 				address = address.replace(regex, '');
 
+				// <p class="priceText" title="3 B/R $450 p/w 1 week free rent">...p/w 1 week free rent</p>
+				// <p class="priceText">$450 p.w.</p>
+				if (priceTitle) {
+					price = priceTitle
+				}
 				let advertised_price = price
+
 				// remove $350 per week, weekly, p.w, p.w., p/w, 
 				price = price.match(/\d\d\d+/);
 				if (price) {
-					price = Number(price[0])
+					price = Number(price[0]) || 0
+				} else {
+					price=null
 				}
+				log.debug("price %s from %s", price, advertised_price)
 
 				let newobj = {}
 			
@@ -148,9 +161,9 @@ function callListingPage(suburb,postcode,page) {
 				}
 
 				// If the new price is zero, null or false, then skip it
-				else if (!price) { 
-					// skip it
-				}
+				// else if (!price) { 
+				// 	// skip it
+				// }
 
 				// if the rents are different store a history
 				else if (ee['Rent'] !== price) {
@@ -158,11 +171,15 @@ function callListingPage(suburb,postcode,page) {
 					log.trace("Old Rent:", ee['Rent'], typeof(ee['Rent']))
 					log.trace("New Rent:", price, typeof(price))
 					newobj["Price History"] = ee['Price History'] + "\n" + price_day
+				} 
+
+				// 
+				else {
+					newobj["Price History"]= ee["Price History"]
 				}
 					
 
 				// LOG AND UPDATE IT!
-				log.debug(newobj)
 				
 				// If airtable record was marked as manually entered then 
 				// don't update it under any circumstance
@@ -170,7 +187,14 @@ function callListingPage(suburb,postcode,page) {
 					log.debug("Skipping entry because it was previously Manually Entered")
 				} else {
 					Airsync.upsertAirtableObj(tableName, newobj, tableIdentifiers, atdata)
-					log.debug("updating AT with new entry")
+					.then( function(values) {
+						log.debug(newobj)
+						let [inserted,updated,skipped] = Airsync.getUpsertionStats()
+						log.info("%s %s",address,suburb);
+						log.info("new %s, updated %s, skipped %s",inserted,updated,skipped);
+					}
+
+					)
 				}
 
 			});

@@ -125,10 +125,13 @@ module.exports = {
             numInserted++; // Used for logging
             return module.exports.insertAirtableObj(baseName, obj);
         } else if (objectEquals(searchObject, obj, cachedTable[2])) { // Object in cache is the same as `obj`, skip it
+            // console.log("Skipping/equals:\n",searchObject,"\n",obj,"\n-------\n")
+
             numIgnored++; // Used for logging
             return searchObject;
         } else { // Object in cache is different from `obj`, update it
             numUpdated++; // Used for loggingß
+            // console.log("Updating:\n",searchObject,"\n",obj,"\n-------\n")
             return module.exports.updateAirtableObj(baseName, obj, cachedTable[1][tableKey]);
         }
     },
@@ -176,14 +179,24 @@ function objectEquals(oldObj, newObj, effectiveFields) {
 
     // The following code is just an array.equals comparison
     for(let i = 0; i < oldVals.length; i++) {
-        if (flexibleNotEquals(oldVals[i], newVals[i])) {
+        if (! flexibleEquals(oldVals[i], newVals[i])) {
             return false;
         }
     }
+    // console.log("Returning true: same object")
+    // console.log("----------------")
+
     return true;
 }
 
 // Because of how Airtable functions, some "different" fields are technically the same
-function flexibleNotEquals(oldVal, newVal) {
-    return oldVal !== newVal && !(oldVal === undefined && newVal === false) && !(oldVal === false && newVal === 0);
+function flexibleEquals(oldVal, newVal) {
+    return (
+        oldVal === newVal || 
+        (oldVal === false && newVal === null) ||
+        (oldVal === null && newVal === false) ||
+        (oldVal === undefined && newVal === false) || 
+        (oldVal === false && newVal === 0)
+        )
+
 }
