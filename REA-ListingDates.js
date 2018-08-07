@@ -14,7 +14,7 @@ const Airsync = require("./airtableSync");
 // after a log.setLevel("warn") call log.warn("something") or 
 // log.error("something") will output messages, 
 // but log.info("something") will not.
-log.setLevel("info")
+log.setLevel("debug")
 
 // Table name that is being updated
 const tableName = "Properties";
@@ -23,8 +23,10 @@ const tableName = "Properties";
 // 15 per second runs fine though
 Airsync.createBottlenecks(tableName); 
 
-const tableIdentifiers = ["Property", "Location"];
-const tableEffectives = ["Property", "Location", "Buy or Rent", "First Listed", "Last Listed", "Bed", "BR", "Link", "Rent", "Price History"];
+const tableIdentifiers = ["ID"];
+let tableEffectives = ["Address", "Location","Buy or Rent", "First Listed", 
+				       "Last Listed", "Bed", "BR", "Link", "Price History"];
+
 let atdata = [];
 
 Airsync.getAirtable(tableName, tableIdentifiers, tableEffectives)
@@ -33,28 +35,34 @@ Airsync.getAirtable(tableName, tableIdentifiers, tableEffectives)
 	let len = Object.values(atdata[1]).length;
 	log.info("AirTable records retrieved:", len)
 	fetchREAdata(atdata);
-	log.trace(atdata);
+	log.info(atdata);
 })
 
 let suburbs = {
-	'Banyo':  'QLD 4014',
-	'Aspley': 'QLD 4034',
-	'Underwood': 'QLD 4119',
-	'Geebung': 'QLD 4034',
-	'Zillmere': 'QLD 4034',
-	'Darra': 'QLD 4076'
+	'Banyo':  'QLD+4014',
+	'Aspley': 'QLD+4034',
+	'Underwood': 'QLD+4119',
+	'Geebung': 'QLD+4034',
+	'Zillmere': 'QLD+4034',
+	'Darra': 'QLD+4076'
 };
 
 function fetchREAdata() {
 	for (const suburb in suburbs) {	
 		const postcode = suburbs[suburb]
-		callListingPage(suburb,postcode,1)
+
+		// this will recursively call itself until no more pages
+		callListingPage(suburb,postcode,1,"Rent")
+		callListingPage(suburb,postcode,1,"Buy")
+		// callBuyListingPage(suburb,postcode,1)
 	}
 }
 
-function callListingPage(suburb,postcode,page) {
-
-	let url = `https://www.realestate.com.au/rent/property-house-in-${suburb}%2c+${postcode}/list-${page}?includeSurrounding=false`
+function callListingPage(suburb,postcode,page,rent_or_buy) {
+	let rb = rent_or_buy.toLowerCase();
+	let url = `https://www.realestate.com.au/${rb}/`+
+			  `property-house-in-${suburb}%2c+${postcode}/list-${page}?`+
+			  `includeSurrounding=false`
 
 	// var regex = /\, ${suburb}.*/
 	return request(url, function (error, response, html) {
@@ -72,10 +80,10 @@ function callListingPage(suburb,postcode,page) {
 			// If this page contains more than one article, 
 			// then we should check the next page
 			if (articles.length > 0) {
-				callListingPage(suburb,postcode,page+1)
+				callListingPage(suburb,postcode,page+1,rent_or_buy)
 			}
 
-			// debug
+			// info: this page listing call
 			log.info("page %s for %s, %s: %d results (%s)",page,suburb, postcode,articles.length, url)
 
 			articles.each(function(i, element){
@@ -92,6 +100,16 @@ function callListingPage(suburb,postcode,page) {
 				let listingUrl = $(this).find('div.vcard h2 a').attr('href');
 				listingUrl = 'https://www.realestate.com.au'+listingUrl
 
+				// get the id from
+				// ?propertyname-12354353
+				let id = listingUrl.match(/-(\d+)/)
+				if ( id ) {
+					id = id[1]
+					// console.log("ID:: 1 %s %s",id, listingUrl)
+				} else {
+					console.error("Missing ID for %s", listingUrl)
+				}
+
 				address = address.replace(regex, '');
 
 				// <p class="priceText" title="3 B/R $450 p/w 1 week free rent">...p/w 1 week free rent</p>
@@ -101,7 +119,15 @@ function callListingPage(suburb,postcode,page) {
 				}
 				let advertised_price = price
 
-				// remove $350 per week, weekly, p.w, p.w., p/w, 
+				// match $350 per week, weekly, p.w, p.w., p/w,
+				// match $350,000 or more
+				if (rent_or_buy === "Buy") {
+					price = price.replace(/\,/,'')
+
+					// some doofus enters $350 000
+					price = price.replace(/ 000/,'000')
+				}
+
 				price = price.match(/\d\d\d+/);
 				if (price) {
 					price = Number(price[0]) || 0
@@ -110,16 +136,23 @@ function callListingPage(suburb,postcode,page) {
 				}
 				log.debug("price %s from %s", price, advertised_price)
 
+				// now start populating our newobj for comparison against airtable
 				let newobj = {}
-			
-				newobj["Property"] = address
+
+				newobj["ID"] = id
+				newobj["Address"] = address
 				newobj["Location"] = suburb
-				newobj["Buy or Rent"] = "Rent"
+				newobj["Buy or Rent"] = rent_or_buy
 				newobj["Bed"] = Number(bed)
 				newobj["BR"] = Number(bth)
 				newobj["Link"]= listingUrl
-				newobj["Rent"]= price
 				newobj["Source"]= "REA Scraper"
+
+				if (rent_or_buy==="Buy") {
+					newobj["Listing Price"]= price
+				} else {
+					newobj["Rent"]= price
+				}
 
 				// ---------------------
 				// DATE HISTORY CAPTURE
@@ -131,9 +164,9 @@ function callListingPage(suburb,postcode,page) {
 				let firstDate;
 
 				// Logic goes here for existing airTable entries:
-				var ee = null
-				if ( address+suburb in atdata[0]) {
-					ee = atdata[0][address+suburb]
+				var ee = {}
+				if ( id in atdata[0]) {
+					ee = atdata[0][id]
 					firstDate = ee['First Listed']
 				}
 
@@ -151,29 +184,29 @@ function callListingPage(suburb,postcode,page) {
 				// if the price is new or has changed capture the history
 				let price_day = today + ":$" + price
 
+				// oldPrice from AT could be 'false', 350 or 350000
+				let oldPrice = (rent_or_buy==="Rent") ? ee['Rent']:ee['Listing Price']
+
+				// if there is no price_history in the table, 
+				// then just store the current price
 				if (!ee || 
 					! 'Price History' in ee || 
 					! ee['Price History'] || 
 					ee['Price History'] === ""
 				) {
-					log.trace("Yeah gotta instantiate:", price_day)
+					// log.trace("Yeah gotta instantiate:", price_day)
 					newobj["Price History"]= price_day
 				}
 
-				// If the new price is zero, null or false, then skip it
-				// else if (!price) { 
-				// 	// skip it
-				// }
-
-				// if the rents are different store a history
-				else if (ee['Rent'] !== price) {
-					log.trace("Price Day:", price_day)
-					log.trace("Old Rent:", ee['Rent'], typeof(ee['Rent']))
-					log.trace("New Rent:", price, typeof(price))
+				// if the prices are truly different store a history
+				else if (! Airsync.flexibleEquals(oldPrice,price)) {
+					// log.trace("Price Day:", price_day)
+					// log.trace("Old Price:", oldPrice, typeof(oldPrice))
+					// log.trace("New Price:", price, typeof(price))
 					newobj["Price History"] = ee['Price History'] + "\n" + price_day
 				} 
 
-				// 
+				// if historical prices are the same then just copy it.
 				else {
 					newobj["Price History"]= ee["Price History"]
 				}
@@ -192,9 +225,7 @@ function callListingPage(suburb,postcode,page) {
 						let [inserted,updated,skipped] = Airsync.getUpsertionStats()
 						log.info("%s %s",address,suburb);
 						log.info("new %s, updated %s, skipped %s",inserted,updated,skipped);
-					}
-
-					)
+					})
 				}
 
 			});
@@ -203,4 +234,3 @@ function callListingPage(suburb,postcode,page) {
 		}
 	});
 }
-

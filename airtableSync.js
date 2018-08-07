@@ -2,10 +2,13 @@
 const Airtable = require("airtable");
 Airtable.configure({
     endpointUrl: 'https://api.airtable.com',
-    apiKey: "keyvjbVyJKBdcU2qR"
+    apiKey: "keyvjbVyJKBdcU2qR" 
 });
-const base = Airtable.base("appNrxhtn5gIpTxUa");
-// var base = new Airtable({apiKey: 'keyvjbVyJKBdcU2qR'}).base('appNrxhtn5gIpTxUa')
+
+
+// staging: appqEbiJFoMWnc1Vh
+// prod: appDWv1JeWJBv6euz
+const base = Airtable.base("appqEbiJFoMWnc1Vh");
 
 // Other module imports
 const Bottleneck = require("bottleneck");
