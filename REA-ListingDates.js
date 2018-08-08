@@ -14,7 +14,7 @@ const Airsync = require("./airtableSync");
 // after a log.setLevel("warn") call log.warn("something") or 
 // log.error("something") will output messages, 
 // but log.info("something") will not.
-log.setLevel("debug")
+log.setLevel("info")
 
 // Table name that is being updated
 const tableName = "Properties";
@@ -182,7 +182,12 @@ function callListingPage(suburb,postcode,page,rent_or_buy) {
 				// ---------------------
 				// PRICE HISTORY CAPTURE
 				// if the price is new or has changed capture the history
-				let price_day = today + ":$" + price
+				let price_day
+				if (price >0){
+					price_day = today + ":$" + price
+				} else {
+					price_day = today + ":" + price
+				}
 
 				// oldPrice from AT could be 'false', 350 or 350000
 				let oldPrice = (rent_or_buy==="Rent") ? ee['Rent']:ee['Listing Price']
@@ -199,16 +204,51 @@ function callListingPage(suburb,postcode,page,rent_or_buy) {
 				}
 
 				// if the prices are truly different store a history
-				else if (! Airsync.flexibleEquals(oldPrice,price)) {
-					// log.trace("Price Day:", price_day)
-					// log.trace("Old Price:", oldPrice, typeof(oldPrice))
-					// log.trace("New Price:", price, typeof(price))
-					newobj["Price History"] = ee['Price History'] + "\n" + price_day
-				} 
-
-				// if historical prices are the same then just copy it.
 				else {
-					newobj["Price History"]= ee["Price History"]
+
+					// Cleanup. Make duplicate entries like this:
+					// 2018-08-04:$null
+					// 2018-08-04:$null
+					// 2018-08-05:$null
+					// to this:
+					// 2018-08-04:null
+					let eeph = ee['Price History']
+					let eephs = eeph.split('\n');
+					let eephnew = [];
+					
+					for (let i = 0; i < eephs.length; i++) {
+						let ee0 = eephs[i]
+						ee0 = ee0.replace('\$null','null')
+
+						// store the 0th entry regardless
+						if (i==0) {
+							eephnew.push(ee0)
+						}
+
+						// test every subsequent entry
+						else {
+							const p_1 = eephs[i-1].split(':')
+							const p0  = eephs[i].split(':')
+							// record different entries
+							if (p_1[1] !== p0[1]) {
+								// if they're not the same, then record the last one
+								eephnew.push(ee0)
+							}
+						}
+
+					}
+
+					newobj['Price History'] = eephnew.join('\n')
+
+					if (! Airsync.flexibleEquals(oldPrice,price)) {
+						newobj["Price History"] = newobj['Price History'] + "\n" + price_day +"added"
+					} 
+
+					// if historical prices are the same then just leave it.
+					// else {
+						// newobj["Price History"]= ee["Price History"]
+					// }
+
 				}
 					
 

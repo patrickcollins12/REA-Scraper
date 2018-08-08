@@ -6,9 +6,9 @@ Airtable.configure({
 });
 
 
-// staging: appqEbiJFoMWnc1Vh
+// staging: apphLFyiIHkh3ohH1
 // prod: appDWv1JeWJBv6euz
-const base = Airtable.base("appqEbiJFoMWnc1Vh");
+const base = Airtable.base("appDWv1JeWJBv6euz");
 
 // Other module imports
 const Bottleneck = require("bottleneck");
@@ -127,7 +127,7 @@ module.exports = {
         if (typeof searchObject === "undefined") { // Doesn't exist; add it
             numInserted++; // Used for logging
             return module.exports.insertAirtableObj(baseName, obj);
-        } else if (objectEquals(searchObject, obj, cachedTable[2])) { // Object in cache is the same as `obj`, skip it
+        } else if (this.objectEquals(searchObject, obj, cachedTable[2])) { // Object in cache is the same as `obj`, skip it
             // console.log("Skipping/equals:\n",searchObject,"\n",obj,"\n-------\n")
 
             numIgnored++; // Used for logging
@@ -165,41 +165,44 @@ module.exports = {
         bottleneckDict[baseName + "Select"] = bottleneckSelect;
     },
 
-};
 
-// Iterates over the "effective fields" in which comparisons will be made
-// This is to ensure overwrites do NOT occur when certain fields still need to be finalized
-function objectEquals(oldObj, newObj, effectiveFields) {
-    let oldVals = [];
-    let newVals = [];
+    // Iterates over the "effective fields" in which comparisons will be made
+    // This is to ensure overwrites do NOT occur when certain fields still need to be finalized
+    objectEquals: function (oldObj, newObj, effectiveFields) {
+        let oldVals = [];
+        let newVals = [];
 
-    effectiveFields.forEach(function (key) {
-        oldVals.push(oldObj[key]);
-    });
-    effectiveFields.forEach(function (key) {
-        newVals.push(newObj[key]);
-    });
+        effectiveFields.forEach(function (key) {
+            oldVals.push(oldObj[key]);
+        });
+        effectiveFields.forEach(function (key) {
+            newVals.push(newObj[key]);
+        });
 
-    // The following code is just an array.equals comparison
-    for(let i = 0; i < oldVals.length; i++) {
-        if (! flexibleEquals(oldVals[i], newVals[i])) {
-            return false;
+        // The following code is just an array.equals comparison
+        for(let i = 0; i < oldVals.length; i++) {
+            if (! this.flexibleEquals(oldVals[i], newVals[i])) {
+                return false;
+            }
         }
+        // console.log("Returning true: same object")
+        // console.log("----------------")
+
+        return true;
+    },
+
+    // Because of how Airtable functions, some "different" fields are technically the same
+    flexibleEquals: function (oldVal, newVal) {
+        return (
+            oldVal === newVal || 
+            (oldVal === false && newVal === null) ||
+            (oldVal === false && newVal === 0) ||
+            (oldVal === null && newVal === false) ||
+            (oldVal === undefined && newVal === false) || 
+            (oldVal === undefined && newVal === null) 
+            
+            )
+
     }
-    // console.log("Returning true: same object")
-    // console.log("----------------")
 
-    return true;
-}
-
-// Because of how Airtable functions, some "different" fields are technically the same
-function flexibleEquals(oldVal, newVal) {
-    return (
-        oldVal === newVal || 
-        (oldVal === false && newVal === null) ||
-        (oldVal === null && newVal === false) ||
-        (oldVal === undefined && newVal === false) || 
-        (oldVal === false && newVal === 0)
-        )
-
-}
+};
