@@ -58,22 +58,20 @@ provider:
 #    - exclude-me-dir/**
 
 functions:
-  hello:
-    handler: handler.hello
-    events:
-      # Invoke Lambda function every minute
-      # - schedule: rate(1 minute)
+  # hello:
+  #   handler: handler.hello
+  #   events:
+  #     # Invoke Lambda function every minute
+  #     # - schedule: rate(1 minute)
 
-      # Invoke Lambda function every hour
-      - schedule: rate(1 hour)
+  #     # Invoke Lambda function every hour
+  #     - schedule: rate(1 hour)
 
   rea:
     handler: handler.rea
-    # events:
+    events:
       # Invoke Lambda function every hour
-      # - schedule: rate(1 hour)
-
-
+      - schedule: rate(1 hour)
       
   # cron:
   #   handler: handler.run
