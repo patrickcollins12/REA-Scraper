@@ -24,7 +24,8 @@ const tableName = "Properties";
 Airsync.createBottlenecks(tableName); 
 
 const tableIdentifiers = ["ID"];
-let tableEffectives = ["Address", "Location","Buy or Rent", "First Listed", 
+let tableEffectives = ["Address", "Location","Buy or Rent", "Source",
+					   "Rent","Listing Price","First Listed", 
 				       "Last Listed", "Bed", "BR", "Link", "Price History"];
 
 let atdata = [];
