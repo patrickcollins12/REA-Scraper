@@ -41,11 +41,17 @@ Airsync.getAirtable(tableName, tableIdentifiers, tableEffectives)
 
 let suburbs = {
 	'Banyo':  'QLD+4014',
+	'Nudgee': 'QLD+4014',
+	'Virginia': 'QLD+4014',
 	'Aspley': 'QLD+4034',
 	'Underwood': 'QLD+4119',
 	'Geebung': 'QLD+4034',
 	'Zillmere': 'QLD+4034',
-	'Darra': 'QLD+4076'
+	'Darra': 'QLD+4076',
+	'Northgate': 'QLD+4013',
+	
+
+	
 };
 
 function fetchREAdata() {

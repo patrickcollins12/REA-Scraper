@@ -41,7 +41,7 @@ Geebung
 Carseldine
 The Gap
 Virginia
-
+Northgate
 `
 
 suburbs = mystr.replace(/^\s*\n/gm,'').replace(/\n$/gm,'').split('\n');
