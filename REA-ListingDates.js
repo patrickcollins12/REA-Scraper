@@ -14,7 +14,7 @@ const Airsync = require("./airtableSync");
 // after a log.setLevel("warn") call log.warn("something") or 
 // log.error("something") will output messages, 
 // but log.info("something") will not.
-log.setLevel("info")
+log.setLevel("debug")
 
 // Table name that is being updated
 const tableName = "Properties";
@@ -129,10 +129,14 @@ function callListingPage(suburb,postcode,page,rent_or_buy) {
 				// match $350 per week, weekly, p.w, p.w., p/w,
 				// match $350,000 or more
 				if (rent_or_buy === "Buy") {
-					price = price.replace(/\,/,'')
+					price = price.replace(/\,/gi,'')
+
+					// High $300k's --> High $300000's
+					let price2 = price.replace(/(\d\d\d)k\b/i,'$1000')
+					log.debug("%s: %s --> %s", address, price, price2)
 
 					// some doofus enters $350 000
-					price = price.replace(/ 000/,'000')
+					price = price2.replace(/ 000/,'000')
 				}
 
 				price = price.match(/\d\d\d+/);
@@ -248,7 +252,7 @@ function callListingPage(suburb,postcode,page,rent_or_buy) {
 					newobj['Price History'] = eephnew.join('\n')
 
 					if (! Airsync.flexibleEquals(oldPrice,price)) {
-						newobj["Price History"] = newobj['Price History'] + "\n" + price_day +"added"
+						newobj["Price History"] = newobj['Price History'] + "\n" + price_day 
 					} 
 
 					// if historical prices are the same then just leave it.
