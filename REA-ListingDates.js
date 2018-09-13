@@ -48,6 +48,7 @@ let suburbs = {
 	'Geebung': 'QLD+4034',
 	'Zillmere': 'QLD+4034',
 	'Darra': 'QLD+4076',
+	'Boondall': 'QLD+4034',
 	'Northgate': 'QLD+4013',
 	
 
