@@ -2,11 +2,12 @@
   "name": "",
   "version": "",
   "dependencies": {
-    "airtable": "^0.5.6",
-    "bottleneck": "^2.6.0",
-    "cheerio": "^1.0.0-rc.2",
-    "loglevel": "^1.6.1",
+    "airtable": "^0.11.6",
+    "bottleneck": "^2.19.5",
+    "cheerio": "^1.0.0-rc.12",
+    "loglevel": "^1.8.1",
+    "npm-check-updates": "^16.10.9",
     "request": "^2.85.0",
-    "serverless": "^1.29.2"
+    "serverless": "^3.30.1"
   }
 }

@@ -6,9 +6,15 @@ Airtable.configure({
 });
 
 
+// REA
 // staging: apphLFyiIHkh3ohH1
 // prod: appDWv1JeWJBv6euz
-const base = Airtable.base("appDWv1JeWJBv6euz");
+// const base = Airtable.base("appDWv1JeWJBv6euz");
+
+// TODO
+// prod: appceewzmZJYSMZKm
+// staging: app6OHIziVUJsCdSy
+const base = Airtable.base("app6OHIziVUJsCdSy");
 
 // Other module imports
 const Bottleneck = require("bottleneck");
@@ -25,33 +31,39 @@ let numIgnored = 0;
 
 module.exports = {
     // Retrieves an entire Airtable with the name `baseName` and `uniqueIDs` are the column names used to create a unique key mapping
-    getAirtable: function (baseName, uniqueIDs, effectiveFields) {
+    getAirtable: function (baseName, queryParams, uniqueIDs, effectiveFields) {
         let dicSelect = bottleneckDict[baseName + "Select"]; // Pulls up the throttled version of an Airtable select
 
         return new Promise(async function (resolve, reject) {
-            let recordDic = {};
-            let uniqueIdDic = {};
+            // let recordDic = {};
+            // let uniqueIdDic = {};
+            let recordsAll = []
 
-            let sClause = await dicSelect({});
+            let sClause = await dicSelect(queryParams);
             let throttledEach = limiter.wrap(sClause.eachPage);
 
             throttledEach(function page(records, next) {
+                
                 records.forEach(function (record) {
-                    let recordKey = '';
+                    fields = record["fields"]
+                    fields["id"] = record['id']
+                    recordsAll.push(fields)
+                    // let recordKey = '';
 
-                    // Creates the dictionary key by just appending the values of each column together in order
-                    uniqueIDs.forEach(function (colName) {
-                        recordKey += record.fields[colName];
-                    });
+                    // // Creates the dictionary key by just appending the values of each column together in order
+                    // uniqueIDs.forEach(function (colName) {
+                    //     recordKey += record.fields[colName];
+                    // });
 
-                    effectiveFields.forEach(function (field) {
-                        if (!record.fields[field]) {
-                            record.fields[field] = false;
-                        }
-                    });
+                    // effectiveFields.forEach(function (field) {
+                    //     if (!record.fields[field]) {
+                    //         record.fields[field] = false;
+                    //     }
+                    // });
 
-                    recordDic[recordKey] = record.fields; // Mapping to the actual record data
-                    uniqueIdDic[recordKey] = record.id; // Mapping to the unique record ID because Airtable loves dealing with record IDs
+                    // recordDic[recordKey] = record.fields; // Mapping to the actual record data
+                    // uniqueIdDic[recordKey] = record.id; // Mapping to the unique record ID because Airtable loves dealing with record IDs
+
                 });
                 next();
             }, function complete(err) {
@@ -59,7 +71,8 @@ module.exports = {
                     console.error("getAirtable() error for", baseName, ":", err);
                     reject(err);
                 } else {
-                    resolve([recordDic, uniqueIdDic, effectiveFields]);
+                    // resolve([recordDic, uniqueIdDic, effectiveFields]);
+                    resolve(recordsAll);
                 }
             });
         });
