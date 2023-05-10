@@ -5,45 +5,65 @@ var cheerio = require('cheerio') // for html parsing
 var log = require('loglevel');
 const Airsync = require("./airtableSync");
 
-// log.trace(msg)
-// log.debug(msg)
-// log.info(msg)
-// log.warn(msg)
-// log.error(msg)
-// This disables all logging below the given level, so that 
-// after a log.setLevel("warn") call log.warn("something") or 
-// log.error("something") will output messages, 
-// but log.info("something") will not.
 log.setLevel("debug")
 
 // Table name that is being updated
 const tableName = "Todo";
-const viewName = "Main TODO (personal)"
+const viewName = "Main TODO (BOTH)"
 
 // Airtable can only run 5 operations per second (supposedly)
 // 15 per second runs fine though
 Airsync.createBottlenecks(tableName); 
 
+// daysSince today
+Date.prototype.daysSince = function() {
+    var date = new Date(this.valueOf());
+    var today = new Date();
+    return (today-date)/(60*60*24*1000);
+}
+
 const tableIdentifiers = ["Todo"];
 let queryParams = {
-    "view":"Main TODO (BOTH)",
+    "view":viewName,
     "fields": ["Todo","Category","Priority","done","Bring back on","Last Modified"]
 };
-let tableEffectives = ["Todo", "Category","Priority"];
 
-Airsync.getAirtable(tableName, queryParams, tableIdentifiers, tableEffectives)
-.then(function(values) {
-    log.info(values)
-    log.info("AirTable records retrieved:", values.length)
-    // for (var key in records){
-    //     let record = records[key]
-    //     if (record['done'] != true ){
-    //         log.info(records[key] );
-    //     }
-        
-    //   }
-    // records.forEach(function (record) {
-    //     log.info(record)
-    // });
+Airsync.getAirtable(tableName, queryParams, tableIdentifiers)
+.then(function(records) {
+    let updates=0
+
+    records.forEach(function (record) {
+        let priority = record["Priority"]        
+        let bbo = record["Bring back on"] 
+        let sinceDate
+        let since
+
+        if (bbo) {
+            sinceDate  = new Date(bbo + "T00:00:00+1000")
+        } else {
+            sinceDate  = new Date(record["Last Modified"])
+        }
+        since = sinceDate.daysSince() 
+
+        function update(days, fromPriority, toPriority) {
+            if (since > days && priority == fromPriority) {
+                log.info(record)
+                log.info("Since Date: " + sinceDate + ", Since:"+since)
+                log.info(`Updating ${record.id} from ${fromPriority} to ${toPriority} because ${days} days elapsed`)
+                console.log("")
+                Airsync.updateAirtableObj(tableName,{"Priority":toPriority}, record.id)
+                updates++
+            }
+        }
+
+        update(   2, "Urgent",    "Today")
+        update(   4, "Today",     "Very soon") 
+        update(   20, "Very soon", "Soon")
+        update( 2*30, "Soon",      "Some day")
+        update( 4*30, "Some day",  "Stale?")
+
+    });
+    log.info("AirTable records retrieved:", records.length)
+    log.info("AirTable records updated:", updates)
 
 })

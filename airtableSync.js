@@ -14,7 +14,7 @@ Airtable.configure({
 // TODO
 // prod: appceewzmZJYSMZKm
 // staging: app6OHIziVUJsCdSy
-const base = Airtable.base("app6OHIziVUJsCdSy");
+const base = Airtable.base("appKdktclSbrVMskk");
 
 // Other module imports
 const Bottleneck = require("bottleneck");
@@ -38,12 +38,13 @@ module.exports = {
             // let recordDic = {};
             // let uniqueIdDic = {};
             let recordsAll = []
+            let rawRecordsAll = []
 
             let sClause = await dicSelect(queryParams);
             let throttledEach = limiter.wrap(sClause.eachPage);
 
             throttledEach(function page(records, next) {
-                
+                rawRecordsAll.push(records)
                 records.forEach(function (record) {
                     fields = record["fields"]
                     fields["id"] = record['id']
@@ -71,7 +72,7 @@ module.exports = {
                     console.error("getAirtable() error for", baseName, ":", err);
                     reject(err);
                 } else {
-                    // resolve([recordDic, uniqueIdDic, effectiveFields]);
+                    // resolve([recordsAll, rawRecordsAll]);
                     resolve(recordsAll);
                 }
             });
