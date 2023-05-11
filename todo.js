@@ -25,7 +25,7 @@ Date.prototype.daysSince = function() {
 const tableIdentifiers = ["Todo"];
 let queryParams = {
     "view":viewName,
-    "fields": ["Todo","Category","Priority","done","Bring back on","Last Modified"]
+    "fields": ["Todo","Category","Priority","done","Bring back on","Last Modified","Automation Log"]
 };
 
 Airsync.getAirtable(tableName, queryParams, tableIdentifiers)
@@ -49,12 +49,31 @@ Airsync.getAirtable(tableName, queryParams, tableIdentifiers)
             if (since > days && priority == fromPriority) {
                 log.info(record)
                 log.info("Since Date: " + sinceDate + ", Since:"+since)
-                log.info(`Updating ${record.id} from ${fromPriority} to ${toPriority} because ${days} days elapsed`)
+                let today = (new Date()).toLocaleDateString();
+                let msg = `${today}: From ${fromPriority} to ${toPriority} because ${days} days elapsed\n` 
+                log.info(msg)
                 console.log("")
-                Airsync.updateAirtableObj(tableName,{"Priority":toPriority}, record.id)
+                let note = record["Automation Log"]??""
+                note += msg
+                let obj = {"Priority":toPriority,"Automation Log":note}
+                Airsync.updateAirtableObj(tableName, obj, record.id)
                 updates++
             }
         }
+
+
+        // update(   1, "Urgent",    "Today")
+        // update(   1, "Today",     "Very soon") 
+        // update(   1, "Very soon", "Soon")
+        // update(   1, "Soon",      "Some day")
+        // update(   1, "Some day",  "Stale?")
+
+
+        // update(   5, "Urgent",    "Today")
+        // update(   5, "Today",     "Very soon") 
+        // update(   5, "Very soon", "Soon")
+        // update(   5, "Soon",      "Some day")
+        // update(   5, "Some day",  "Stale?")
 
         update(   2, "Urgent",    "Today")
         update(   4, "Today",     "Very soon") 

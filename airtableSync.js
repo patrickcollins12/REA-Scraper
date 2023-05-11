@@ -14,7 +14,7 @@ Airtable.configure({
 // TODO
 // prod: appceewzmZJYSMZKm
 // staging: app6OHIziVUJsCdSy
-const base = Airtable.base("appKdktclSbrVMskk");
+const base = Airtable.base("appceewzmZJYSMZKm");
 
 // Other module imports
 const Bottleneck = require("bottleneck");

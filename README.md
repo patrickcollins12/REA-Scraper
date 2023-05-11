@@ -1,4 +1,5 @@
 # REA-Scraper
 
-Scrape Rental data from REA to capture first listed and last listed dates.
-
+node todo.js
+serverless deploy
+serverless invoke --function todo
