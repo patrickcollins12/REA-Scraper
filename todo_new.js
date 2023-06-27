@@ -3,24 +3,30 @@
 var request = require('request') // for requests
 var cheerio = require('cheerio') // for html parsing
 var log = require('loglevel');
-const Airsync = require("./airtableSync");
+const AirtableTableSync = require('./AirtableTableSync');
 
 log.setLevel("debug")
 
+let base = new AirtableTableSync({
+    apiKey:"keyvjbVyJKBdcU2qR", 
+    base:"appceewzmZJYSMZKm",
+    table:"Todo"
+});
 
-// Table name that is being updated
-const scheduleTable = "Todo";
+let selectParams = {
+    "view":"Main TODO (BOTH)",
+    "fields": ["Todo","Category","Priority","done","Bring back on","Last Modified","Automation Log"]
+}
 
-// Airsync.getAirtable(scheduleTable, {}, tableIdentifiers)
-// .then(function(records) {
-//     let updates=0
-//     console.log(records)
-//     records.forEach(function (record) {
-//         // console.log(record)
-//     })
-// })
+base.getAirtable(selectParams).then(function(records) {
+    let updates=0
+    console.log(records)
+    records.forEach(function (record) {
+        // console.log(record)
+    })
+})
 
-// process.exit()
+process.exit()
 
 ////////////////////////////////////////////
 // daysSince today
@@ -34,10 +40,6 @@ Date.prototype.daysSince = function() {
 const tableName = "Todo";
 const viewName = "Main TODO (BOTH)"
 
-// Airtable can only run 5 operations per second (supposedly)
-// 15 per second runs fine though
-Airsync.createBottlenecks(tableName); 
-
 const tableIdentifiers = ["Todo"];
 let queryParams = {
     "view":viewName,
@@ -47,7 +49,6 @@ let queryParams = {
 Airsync.getAirtable(tableName, queryParams, tableIdentifiers)
 .then(function(records) {
     let updates=0
-    let today = (new Date()).toLocaleDateString();
 
     records.forEach(function (record) {
         let priority = record["Priority"]        
@@ -55,18 +56,18 @@ Airsync.getAirtable(tableName, queryParams, tableIdentifiers)
         let sinceDate
         let since
 
-        ///////////////////
-        // Auto deprioritise after specific days
         if (bbo) {
             sinceDate  = new Date(bbo + "T00:00:00+1000")
         } else {
             sinceDate  = new Date(record["Last Modified"])
         }
         since = sinceDate.daysSince() 
+
         function update(days, fromPriority, toPriority) {
             if (since > days && priority == fromPriority) {
                 log.info(record)
                 log.info("Since Date: " + sinceDate + ", Since:"+since)
+                let today = (new Date()).toLocaleDateString();
                 let msg = `${today}: From ${fromPriority} to ${toPriority} because ${days} days elapsed\n` 
                 log.info(msg)
                 console.log("")
@@ -78,31 +79,24 @@ Airsync.getAirtable(tableName, queryParams, tableIdentifiers)
             }
         }
 
+        // update(   1, "Urgent",    "Today")
+        // update(   1, "Today",     "Very soon") 
+        // update(   1, "Very soon", "Soon")
+        // update(   1, "Soon",      "Some day")
+        // update(   1, "Some day",  "Stale?")
+
+
+        // update(   5, "Urgent",    "Today")
+        // update(   5, "Today",     "Very soon") 
+        // update(   5, "Very soon", "Soon")
+        // update(   5, "Soon",      "Some day")
+        // update(   5, "Some day",  "Stale?")
+
         update(   2, "Urgent",    "Today")
         update(   4, "Today",     "Very soon") 
         update(   20, "Very soon", "Soon")
         update( 2*30, "Soon",      "Some day")
         update( 4*30, "Some day",  "Stale?")
-
-        /////////////////////
-        // update Priority from Tomorrow to Today between 4-6am
-        if (priority == "Tomorrow") {
-            const utc_hr = new Date().getUTCHours();
-            // 9pm AEST = 11am UTC (1100)
-            // 4am AEST =  6pm UTC (1800)
-            // 5am AEST =  7pm UTC (1900)
-            // 6am AEST =  8pm UTC (2000)
-
-            // if (11 <= utc_hr && utc_hr <= 12) { // TEST
-            if (4 <= utc_hr && utc_hr <= 6) {
-                log.info("Tomorrow => Today: " + record.id + " " + utc_hr )
-                let note = record["Automation Log"]??""
-                note += `${today}: Promoted from Tomorrow to Today\n`
-                let obj = {"Priority":"Today","Automation Log":note}
-                Airsync.updateAirtableObj(tableName, obj, record.id)
-            }
-            
-        }
 
     });
     log.info("AirTable records retrieved:", records.length)

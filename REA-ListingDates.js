@@ -3,7 +3,7 @@
 var request = require('request') // for requests
 var cheerio = require('cheerio') // for html parsing
 var log = require('loglevel');
-const Airsync = require("./airtableSync");
+const Airsync = require("./AirtableSync");
 
 // log.trace(msg)
 // log.debug(msg)

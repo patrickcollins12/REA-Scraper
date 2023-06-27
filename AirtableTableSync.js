@@ -1,76 +1,64 @@
 // Airtable Object Instantiations
+
 const Airtable = require("airtable");
-
-Airtable.configure({
-    endpointUrl: 'https://api.airtable.com',
-    apiKey: "keyvjbVyJKBdcU2qR" 
-});
-
-
-// REA
-// staging: apphLFyiIHkh3ohH1
-// prod: appDWv1JeWJBv6euz
-// const base = Airtable.base("appDWv1JeWJBv6euz");
-
-// TODO
-// prod: appceewzmZJYSMZKm
-// staging: app6OHIziVUJsCdSy
-const base = Airtable.base("appceewzmZJYSMZKm");
-
-// Other module imports
 const Bottleneck = require("bottleneck");
 
-// Bottlenecking instantiations
-const bottleneckDict = {};
-const limiter = new Bottleneck({minTime: 1000/15});
+class AirtableTableSync {
 
-// Logging variables
-let numQueued = 0;
-let numInserted = 0;
-let numUpdated = 0;
-let numIgnored = 0;
+    constructor({ apiKey, baseKey, table, requestsPerSecond=4 }) {
 
-module.exports = {
-    // Retrieves an entire Airtable with the name `baseName` and `uniqueIDs` are the column names used to create a unique key mapping
-    getAirtable: function (baseName, queryParams, uniqueIDs, effectiveFields) {
-        let dicSelect = bottleneckDict[baseName + "Select"]; // Pulls up the throttled version of an Airtable select
+        Airtable.configure({ apiKey: apiKey })
 
-        return new Promise(async function (resolve, reject) {
+        this.base = Airtable.base(baseKey)
+        this.table = this.base(table)
+        this.baseKey = baseKey;
+
+        // sets up the bottlenecking objects
+        this.createBottlenecks(requestsPerSecond)
+
+        // Logging variables
+        this.numQueued = 0;
+        this.numInserted = 0;
+        this.numUpdated = 0;
+        this.numIgnored = 0;
+    }
+
+    // Retrieves an entire Airtable table
+    async getAirtable(queryParams) {
+        // let dicSelect = this.bottleneckDict["Select"]; // Pulls up the throttled version of an Airtable select
+        let testx = this
+
+        return new Promise((resolve, reject) => {
+            
             // let recordDic = {};
             // let uniqueIdDic = {};
+            
             let recordsAll = []
             let rawRecordsAll = []
 
-            let sClause = await dicSelect(queryParams);
-            let throttledEach = limiter.wrap(sClause.eachPage);
+            console.log("testx:" + testx.throttledSelect)
+            
+
+            let sClause = testx.throttledSelect(queryParams);
+            console.log("here")
+            console.log("sClause:"+sClause)
+
+            let throttledEach = this.limiter.wrap(sClause.eachPage);
+            console.log("throttledEach:"+throttledEach)
 
             throttledEach(function page(records, next) {
+                console.log("here2")
                 rawRecordsAll.push(records)
                 records.forEach(function (record) {
                     fields = record["fields"]
                     fields["id"] = record['id']
                     recordsAll.push(fields)
-                    // let recordKey = '';
-
-                    // // Creates the dictionary key by just appending the values of each column together in order
-                    // uniqueIDs.forEach(function (colName) {
-                    //     recordKey += record.fields[colName];
-                    // });
-
-                    // effectiveFields.forEach(function (field) {
-                    //     if (!record.fields[field]) {
-                    //         record.fields[field] = false;
-                    //     }
-                    // });
-
-                    // recordDic[recordKey] = record.fields; // Mapping to the actual record data
-                    // uniqueIdDic[recordKey] = record.id; // Mapping to the unique record ID because Airtable loves dealing with record IDs
 
                 });
                 next();
             }, function complete(err) {
                 if (err) {
-                    console.error("getAirtable() error for", baseName, ":", err);
+                    console.error("getAirtable() error for", this.baseKey, ":", err);
                     reject(err);
                 } else {
                     // resolve([recordsAll, rawRecordsAll]);
@@ -78,22 +66,22 @@ module.exports = {
                 }
             });
         });
-    },
+    }
 
     // Adds an airtable `obj` to the Airtable with the name `baseName`
-    insertAirtableObj: async function (baseName, obj) {
-        let dicCreate = bottleneckDict[baseName + "Create"]; // Pulls up the throttled version of an Airtable create
+    async insertAirtableObj(obj) {
+        // let dicCreate = this.bottleneckDict["Create"]; // Pulls up the throttled version of an Airtable create
 
         return new Promise(function (resolve, reject) {
-            dicCreate(obj, function (err, record) {
+            this.throttledCreate(obj, function (err, record) {
                 if (err) {
                     // Sometimes airtable's servers mess up and an operation needs to reprocess
                     if (err.statusCode === 503) {
                         console.error("An operation has been requeued");
-                        console.error(`${numQueued++} operations have been queued`);
-                        resolve(module.exports.insertAirtableObj(baseName, obj)); // Basically just calls itself again and hope it works this time
+                        console.error(`${this.numQueued++} operations have been queued`);
+                        resolve(insertAirtableObj(obj)); // Basically just calls itself again and hope it works this time
                     } else {
-                        console.error("insertAirtableObj() error for", baseName, ":", err);
+                        console.error("insertAirtableObj() error for", this.baseKey, ":", err);
                         console.error("Attempted to add", obj);
                         reject(err);
                     }
@@ -102,22 +90,22 @@ module.exports = {
                 }
             });
         });
-    },
+    }
 
     // Updates an airtable object with the unique `id` in the Airtable with name `baseName` with `obj`
-    updateAirtableObj: async function (baseName, obj, id) {
-        let dicUpdate = bottleneckDict[baseName + "Update"];
+    async updateAirtableObj (obj, id) {
+        // let dicUpdate = this.bottleneckDict["Update"];
 
         return new Promise(function (resolve, reject) {
-            dicUpdate(id, obj, function (err, record) {
+            this.throttledUpdate(id, obj, function (err, record) {
                 if (err) {
                     // Some more airtable error catching
                     if (err.statusCode === 503) {
                         console.error("An operation has been requeued");
-                        console.error(`${numQueued++} operations have been queued`);
-                        resolve(module.exports.updateAirtableObj(baseName, obj, id)); // Trying again
+                        console.error(`${this.numQueued++} operations have been queued`);
+                        resolve(updateAirtableObj(obj, id)); // Trying again
                     } else {
-                        console.error("updateAirtableObj() error for", baseName, ":", err);
+                        console.error("updateAirtableObj() error for", this.baseKey, ":", err);
                         console.error("Attempted to update", id, "with", obj);
                         reject(err);
                     }
@@ -126,10 +114,10 @@ module.exports = {
                 }
             });
         });
-    },
+    }
 
     // Contains the rerouting logic to see if we insert the `obj` or update it instead
-    upsertAirtableObj: async function (baseName, obj, uniqueIDs, cachedTable) {
+    async upsertAirtableObj (obj, uniqueIDs, cachedTable) {
         // Notice that this is the same key generation technique as `getAirtable()`
         let tableKey = '';
         uniqueIDs.forEach(function (colName) {
@@ -140,50 +128,48 @@ module.exports = {
         let searchObject = cachedTable[0][tableKey];
 
         if (typeof searchObject === "undefined") { // Doesn't exist; add it
-            numInserted++; // Used for logging
-            return module.exports.insertAirtableObj(baseName, obj);
+            this.numInserted++; // Used for logging
+            return insertAirtableObj(obj);
         } else if (this.objectEquals(searchObject, obj, cachedTable[2])) { // Object in cache is the same as `obj`, skip it
             // console.log("Skipping/equals:\n",searchObject,"\n",obj,"\n-------\n")
 
-            numIgnored++; // Used for logging
+            this.numIgnored++; // Used for logging
             return searchObject;
         } else { // Object in cache is different from `obj`, update it
-            numUpdated++; // Used for loggingß
+            this.numUpdated++; // Used for loggingß
             // console.log("Updating:\n",searchObject,"\n",obj,"\n-------\n")
-            return module.exports.updateAirtableObj(baseName, obj, cachedTable[1][tableKey]);
+            return updateAirtableObj(obj, cachedTable[1][tableKey]);
         }
-    },
+    }
 
     // Useful logging variables
-    getUpsertionStats: function () {
-        return [numInserted, numUpdated, numIgnored]
-    },
+    getUpsertionStats () {
+        return [this.numInserted, this.numUpdated, this.numIgnored]
+    }
 
     // When running two syncing scripts in tandem using the same library in the same directory,
     // logging variables need to be overwritten
-    resetUpsertionStats: function () {
-        numQueued = 0;
-        numInserted = 0;
-        numUpdated = 0;
-        numIgnored = 0;
-    },
+    resetUpsertionStats () {
+        this.numQueued = 0;
+        this.numInserted = 0;
+        this.numUpdated = 0;
+        this.numIgnored = 0;
+    }
 
     // The function to create the throttled versions of Airtable methods
-    createBottlenecks: function (baseName) {
-        let bottleneckCreate = limiter.wrap(base(baseName).create);
-        let bottleneckUpdate = limiter.wrap(base(baseName).update);
-        let bottleneckSelect = limiter.wrap(base(baseName).select);
-
-        // Stores all of these new functions in a dictionary so it's fast to pull them up and use them later
-        bottleneckDict[baseName + "Create"] = bottleneckCreate;
-        bottleneckDict[baseName + "Update"] = bottleneckUpdate;
-        bottleneckDict[baseName + "Select"] = bottleneckSelect;
-    },
+    createBottlenecks(requestsPerSecond) {
+        // Bottlenecking instantiations
+        this.limiter = new Bottleneck({minTime: 1000/requestsPerSecond});
+        
+        this.throttledCreate = this.limiter.wrap(this.table.create);
+        this.throttledUpdate = this.limiter.wrap(this.table.update);
+        this.throttledSelect = this.limiter.wrap(this.table.select);
+    }
 
 
     // Iterates over the "effective fields" in which comparisons will be made
     // This is to ensure overwrites do NOT occur when certain fields still need to be finalized
-    objectEquals: function (oldObj, newObj, effectiveFields) {
+    objectEquals(oldObj, newObj, effectiveFields) {
         let oldVals = [];
         let newVals = [];
 
@@ -204,10 +190,10 @@ module.exports = {
         // console.log("----------------")
 
         return true;
-    },
+    }
 
     // Because of how Airtable functions, some "different" fields are technically the same
-    flexibleEquals: function (oldVal, newVal) {
+    flexibleEquals (oldVal, newVal) {
         return (
             oldVal === newVal || 
             (oldVal === false && newVal === null) ||
@@ -219,5 +205,7 @@ module.exports = {
             )
 
     }
+        
+}
 
-};
+module.exports = AirtableTableSync;
