@@ -6,7 +6,6 @@ provider:
   memorySize: 2048 # optional, in MB, default is 1024
   timeout: 120 # optional, in seconds, default is 6
 
-
 functions:
   todo:
     handler: handler.todo
