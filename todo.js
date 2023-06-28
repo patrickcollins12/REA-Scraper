@@ -88,13 +88,14 @@ Airsync.getAirtable(tableName, queryParams, tableIdentifiers)
         // update Priority from Tomorrow to Today between 4-6am
         if (priority == "Tomorrow") {
             const utc_hr = new Date().getUTCHours();
-            // 9pm AEST = 11am UTC (1100)
-            // 4am AEST =  6pm UTC (1800)
-            // 5am AEST =  7pm UTC (1900)
-            // 6am AEST =  8pm UTC (2000)
+            // 12pm AEST =  2am UTC (0200)
+            //  9pm AEST = 11am UTC (1100)
+            //  4am AEST =  6pm UTC (1800)
+            //  5am AEST =  7pm UTC (1900)
+            //  6am AEST =  8pm UTC (2000)
 
             // if (11 <= utc_hr && utc_hr <= 12) { // TEST
-            if (4 <= utc_hr && utc_hr <= 6) {
+            if (18 <= utc_hr && utc_hr <= 19) {
                 log.info("Tomorrow => Today: " + record.id + " " + utc_hr )
                 let note = record["Automation Log"]??""
                 note += `${today}: Promoted from Tomorrow to Today\n`
