@@ -102,7 +102,6 @@ Airsync.getAirtable(tableName, queryParams, tableIdentifiers)
                 let obj = {"Priority":"Today","Automation Log":note}
                 Airsync.updateAirtableObj(tableName, obj, record.id)
             }
-            
         }
 
     });

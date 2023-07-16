@@ -3,7 +3,8 @@ const Airtable = require("airtable");
 
 Airtable.configure({
     endpointUrl: 'https://api.airtable.com',
-    apiKey: "keyvjbVyJKBdcU2qR" 
+    // apiKey: "keyvjbVyJKBdcU2qR"
+    apiKey: "patCXxQ27jI3z12nC.2c75d751d1b1d6db13db775c6929d87ef1e62dd81432ce0238624933d89a3d82"
 });
 
 
