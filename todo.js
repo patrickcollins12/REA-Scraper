@@ -44,6 +44,7 @@ let queryParams = {
     "fields": ["Todo","Category","Priority","done","Bring back on","Last Modified","Automation Log"]
 };
 
+// go through the "Todo" > "Main TODO (BOTH)" view, record-at-a-time
 Airsync.getAirtable(tableName, queryParams, tableIdentifiers)
 .then(function(records) {
     let updates=0
@@ -78,6 +79,7 @@ Airsync.getAirtable(tableName, queryParams, tableIdentifiers)
             }
         }
 
+        // how many days before deprioritising to the next Priority
         update(   2, "Urgent",    "Today")
         update(   4, "Today",     "Very soon") 
         update(   20, "Very soon", "Soon")
@@ -85,16 +87,17 @@ Airsync.getAirtable(tableName, queryParams, tableIdentifiers)
         update( 4*30, "Some day",  "Stale?")
 
         /////////////////////
-        // update Priority from Tomorrow to Today between 4-6am
+        // update Priority from Tomorrow to Today between 4-6am AEST
         if (priority == "Tomorrow") {
+            // process.env.TZ = 'Australia/Sydney'
             const utc_hr = new Date().getUTCHours();
+            
             // 12pm AEST =  2am UTC (0200)
             //  9pm AEST = 11am UTC (1100)
             //  4am AEST =  6pm UTC (1800)
             //  5am AEST =  7pm UTC (1900)
             //  6am AEST =  8pm UTC (2000)
 
-            // if (11 <= utc_hr && utc_hr <= 12) { // TEST
             if (18 <= utc_hr && utc_hr <= 19) {
                 log.info("Tomorrow => Today: " + record.id + " " + utc_hr )
                 let note = record["Automation Log"]??""
