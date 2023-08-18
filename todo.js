@@ -58,11 +58,21 @@ Airsync.getAirtable(tableName, queryParams, tableIdentifiers)
 
         ///////////////////
         // Auto deprioritise after specific days
+
+        // Default strategy is to use the LM date for deprioritisation
+        let lm  = new Date(record["Last Modified"])
+        sinceDate = lm
+
+        // LM can get stale when used with BBO.
+        // if BBO is newer than LM, then use it. 
+        // Otherwise we stick with LM
         if (bbo) {
-            sinceDate  = new Date(bbo + "T00:00:00+1000")
-        } else {
-            sinceDate  = new Date(record["Last Modified"])
-        }
+            let bbot  = new Date(bbo + "T00:00:00+1000")
+            if (bbot > lm ) {
+                sinceDate = bbot
+            }
+        } 
+
         since = sinceDate.daysSince() 
         function update(days, fromPriority, toPriority) {
             if (since > days && priority == fromPriority) {
