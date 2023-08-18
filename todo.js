@@ -32,7 +32,7 @@ Date.prototype.daysSince = function() {
 
 // Table name that is being updated
 const tableName = "Todo";
-const viewName = "Main TODO (BOTH)"
+const viewName = "All Todos (Combined)"
 
 // Airtable can only run 5 operations per second (supposedly)
 // 15 per second runs fine though
