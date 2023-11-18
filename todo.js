@@ -49,6 +49,8 @@ Airsync.getAirtable(tableName, queryParams, tableIdentifiers)
 .then(function(records) {
     let updates=0
     let today = (new Date()).toLocaleDateString();
+    const utc_hr = new Date().getUTCHours();
+    const utc_day = new Date().getUTCDay();
 
     records.forEach(function (record) {
         let priority = record["Priority"]        
@@ -98,16 +100,10 @@ Airsync.getAirtable(tableName, queryParams, tableIdentifiers)
 
         /////////////////////
         // update Priority from Tomorrow to Today between 4-6am AEST
-        if (priority == "Tomorrow") {
-            // process.env.TZ = 'Australia/Sydney'
-            const utc_hr = new Date().getUTCHours();
-            
-            // 12pm AEST =  2am UTC (0200)
-            //  9pm AEST = 11am UTC (1100)
-            //  4am AEST =  6pm UTC (1800)
-            //  5am AEST =  7pm UTC (1900)
-            //  6am AEST =  8pm UTC (2000)
+        // UTC:  00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23
+        // AEST: 11 12 13 14 15 16 17 18 19 20 21 22 23 00 01 02 03 04 05 06 07 08 09 10
 
+        if (priority == "Tomorrow" ) {
             if (18 <= utc_hr && utc_hr <= 19) {
                 log.info("Tomorrow => Today: " + record.id + " " + utc_hr )
                 let note = record["Automation Log"]??""
@@ -115,6 +111,21 @@ Airsync.getAirtable(tableName, queryParams, tableIdentifiers)
                 let obj = {"Priority":"Today","Automation Log":note}
                 Airsync.updateAirtableObj(tableName, obj, record.id)
             }
+        }
+
+        /////////////////////
+        // update Priority from Monday to Today between 9pm Sunday night to 11am Monday
+        // UTC:  00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23
+        // AEST: 11 12 13 14 15 16 17 18 19 20 21 22 23 00 01 02 03 04 05 06 07 08 09 10
+        //if (priority == "Monday" && utc_day == 0 && utc_hr > 12 ) { // prod
+        if (priority == "Monday" && utc_day == 6 && utc_hr > 0 ) { // dev
+            log.info(`Monday: ${record.id} ${utc_day} ${utc_hr}` )
+
+            log.info( "Monday => Today: " + record.id + " " + utc_hr )
+            let note = record["Automation Log"] ?? ""
+            note += `${today}: Promoted from Monday to Today\n`
+            let obj = {"Priority":"Today","Automation Log":note}
+            Airsync.updateAirtableObj(tableName, obj, record.id)
         }
 
     });
