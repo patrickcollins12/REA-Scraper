@@ -114,17 +114,15 @@ Airsync.getAirtable(tableName, queryParams, tableIdentifiers)
         }
 
         /////////////////////
-        // update Priority from Monday to Today between 9pm Sunday night to 11am Monday
+        // update Priority from Monday to Tomorrow between after 11am Sunday morning
         // UTC:  00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23
         // AEST: 11 12 13 14 15 16 17 18 19 20 21 22 23 00 01 02 03 04 05 06 07 08 09 10
-        //if (priority == "Monday" && utc_day == 0 && utc_hr > 12 ) { // prod
-        if (priority == "Monday" && utc_day == 6 && utc_hr > 0 ) { // dev
+        if (priority == "Monday" && utc_day == 0 && utc_hr > 0 ) { // prod
+        // if (priority == "Monday" && utc_day == 6 && utc_hr > 0 ) { // dev
             log.info(`Monday: ${record.id} ${utc_day} ${utc_hr}` )
-
-            log.info( "Monday => Today: " + record.id + " " + utc_hr )
             let note = record["Automation Log"] ?? ""
-            note += `${today}: Promoted from Monday to Today\n`
-            let obj = {"Priority":"Today","Automation Log":note}
+            note += `${today}: Promoted from Monday to Tomorrow\n`
+            let obj = {"Priority":"Tomorrow","Automation Log":note}
             Airsync.updateAirtableObj(tableName, obj, record.id)
         }
 
