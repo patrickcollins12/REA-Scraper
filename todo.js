@@ -11,17 +11,6 @@ log.setLevel("debug")
 // Table name that is being updated
 const scheduleTable = "Todo";
 
-// Airsync.getAirtable(scheduleTable, {}, tableIdentifiers)
-// .then(function(records) {
-//     let updates=0
-//     console.log(records)
-//     records.forEach(function (record) {
-//         // console.log(record)
-//     })
-// })
-
-// process.exit()
-
 ////////////////////////////////////////////
 // daysSince today
 Date.prototype.daysSince = function() {
@@ -127,7 +116,5 @@ Airsync.getAirtable(tableName, queryParams, tableIdentifiers)
         }
 
     });
-    log.info("AirTable records retrieved:", records.length)
-    log.info("AirTable records updated:", updates)
-
+    log.info(`AirTable records. Retrieved: ${records.length}. Updated: ${updates}` )
 })
