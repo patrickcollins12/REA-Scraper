@@ -1,6 +1,6 @@
 "use strict"
 
-var request = require('request') // for requests
+// var request = require('request') // for requests
 var cheerio = require('cheerio') // for html parsing
 var log = require('loglevel');
 const Airsync = require("./airtableSync");
